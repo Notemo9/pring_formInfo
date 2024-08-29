@@ -3,7 +3,7 @@
 		<h1>语音叫号系统</h1>
 		<div>
 			<label for="serverUrl">服务器地址：</label>
-			<input id="serverUrl" v-model="serverUrl" placeholder="http://example.com" />
+			<input id="serverUrl" v-model="serverUrl" placeholder="" @change="changeUrl" />
 		</div>
 
 		<div>
@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 	import { ref, onMounted } from 'vue'
+	import connection from './index'
 
 	// 组件的响应式数据
 	const serverUrl = ref<string>('')
@@ -51,12 +52,29 @@
 
 	// 获取可用的声音列表
 	const voices = ref<SpeechSynthesisVoice[]>([])
-
 	const getVoices = () => {
 		voices.value = speechSynthesis.getVoices()
 		console.log('🚀 ~ getVoices ~ speechSynthesis.getVoices():', speechSynthesis.getVoices())
 	}
 
+	// 叫号弹窗
+	connection.on('CallUser', e => {
+		console.log('🚀 ~ connection.on ~ e:', e)
+		const formattedCode = e.voiceContent.replace(/([A-Z0-9])/g, '$1 ').replace(/  +/g, ' ')
+		const formattedString = formattedCode.replace(/J\d{2}[A-Z]\d{2}/, formattedCode).trim()
+		playMsg(formattedString)
+	})
+
+	const changeUrl = (e: any) => {
+		if (e.target.value.trim()) {
+			serverUrl.value = e.target.value
+			connection.start().then(res => {
+				console.log('连接成功')
+			})
+		} else {
+			alert('请输入服务器地址')
+		}
+	}
 	const playVoice = () => {
 		if (!testMessage.value.trim()) {
 			alert('请输入测试播放内容')
@@ -67,8 +85,11 @@
 			alert('播放次数必须大于等于 1')
 			return
 		}
+		playMsg(testMessage.value)
+	}
 
-		const utterance = new SpeechSynthesisUtterance(testMessage.value)
+	const playMsg = (msg: any) => {
+		const utterance = new SpeechSynthesisUtterance(msg)
 		utterance.rate = rate.value
 
 		// 设置选择的声音
@@ -79,7 +100,7 @@
 
 		// 播放指定次数
 		for (let i = 0; i < playCount.value; i++) {
-			const clonedUtterance = new SpeechSynthesisUtterance(testMessage.value)
+			const clonedUtterance = new SpeechSynthesisUtterance(msg)
 			clonedUtterance.rate = rate.value
 			if (voice) {
 				clonedUtterance.voice = voice
@@ -91,6 +112,9 @@
 	onMounted(() => {
 		getVoices()
 		speechSynthesis.onvoiceschanged = getVoices
+		connection.start().then(res => {
+			console.log('连接成功')
+		})
 	})
 </script>
 
