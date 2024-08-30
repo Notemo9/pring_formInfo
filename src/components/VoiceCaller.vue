@@ -4,8 +4,8 @@
 		<div>
 			<label for="serverUrl">服务器地址：</label>
 			<input id="serverUrl" v-model="serverUrl" placeholder="" @change="changeUrl" />
+			<button style="margin-bottom: 10px" @click="onConnect">连接</button>
 		</div>
-
 		<div>
 			<label for="rate">语速：</label>
 			<select id="rate" v-model.number="rate">
@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 	import { ref, onMounted } from 'vue'
-	import connection from './index'
+	import * as SignalR from '@microsoft/signalr'
 
 	// 组件的响应式数据
 	const serverUrl = ref<string>('')
@@ -57,24 +57,52 @@
 		console.log('🚀 ~ getVoices ~ speechSynthesis.getVoices():', speechSynthesis.getVoices())
 	}
 
-	// 叫号弹窗
-	connection.on('CallUser', e => {
-		console.log('🚀 ~ connection.on ~ e:', e)
-		const formattedCode = e.voiceContent.replace(/([A-Z0-9])/g, '$1 ').replace(/  +/g, ' ')
-		const formattedString = formattedCode.replace(/J\d{2}[A-Z]\d{2}/, formattedCode).trim()
-		playMsg(formattedString)
-	})
-
-	const changeUrl = (e: any) => {
-		if (e.target.value.trim()) {
-			serverUrl.value = e.target.value
-			connection.start().then(res => {
-				console.log('连接成功')
+	const onConnect = () => {
+		// 初始化SignalR对象
+		const connection = new SignalR.HubConnectionBuilder()
+			.configureLogging(SignalR.LogLevel.Information)
+			.withUrl(`ws://${serverUrl.value}/hubs/ScreenCall`, { transport: SignalR.HttpTransportType.WebSockets, skipNegotiation: true })
+			.withAutomaticReconnect({
+				nextRetryDelayInMilliseconds: () => {
+					return 5000 // 每5秒重连一次
+				},
 			})
-		} else {
-			alert('请输入服务器地址')
-		}
+			.build()
+
+		connection.keepAliveIntervalInMilliseconds = 15 * 1000 // 心跳检测15s
+		connection.serverTimeoutInMilliseconds = 30 * 60 * 1000 // 超时时间30m
+
+		// 重连成功
+		connection.onreconnected(() => {
+			console.log('重连成功')
+		})
+
+		connection.start().then(res => {
+			console.log('连接成功')
+			alert('连接成功')
+		})
+		// 叫号弹窗
+		connection.on('CallUser', e => {
+			console.log('🚀 ~ onConnect ~ e:', e)
+			const regex = /[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-HJ-NP-Z][A-HJ-NP-Z0-9]{4,5}[A-HJ-NP-Z0-9挂学警港澳]/
+			console.log('🚀 ~ onConnect ~ regex:', regex, `const formattedString = e.voiceContent.replace(regex, e.hphm.split('').join(' '))`)
+			// const formattedString = e.voiceContent.replace(/(.\w)(\w)(\d)(\d)(\d)(\d)/, '$1 $2 $3 $4 $5 $6', '晋 $1 $2 $3 $4 $5 $6')
+			const formattedString = e.voiceContent.replace(regex, e.hphm.split('').join(' '))
+			console.log(formattedString)
+
+			localStorage.setItem(
+				'item',
+				JSON.stringify({
+					serverUrl: serverUrl.value,
+					rate: rate.value,
+					selectedVoice: selectedVoice.value,
+				})
+			)
+			playMsg(formattedString)
+		})
 	}
+
+	const changeUrl = (e: any) => {}
 	const playVoice = () => {
 		if (!testMessage.value.trim()) {
 			alert('请输入测试播放内容')
@@ -112,9 +140,14 @@
 	onMounted(() => {
 		getVoices()
 		speechSynthesis.onvoiceschanged = getVoices
-		connection.start().then(res => {
-			console.log('连接成功')
-		})
+		const res = localStorage.getItem('item')
+		if (res) {
+			const data = JSON.parse(res)
+			serverUrl.value = data.serverUrl
+			rate.value = data.rate
+			selectedVoice.value = data.selectedVoice
+			onConnect()
+		}
 	})
 </script>
 
