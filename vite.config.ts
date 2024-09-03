@@ -2,21 +2,21 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-const pathResolve = (dir: string) => {
-	return resolve(__dirname, '.', dir)
-}
-const alias: Record<string, string> = {
-	'@': pathResolve('./src/'),
-}
-
+const pathSrc = resolve(__dirname, './src')
 // https://vitejs.dev/config/
-export default defineConfig({
-	plugins: [vue()],
-	resolve: { alias },
-	base: './',
-	server: {
-		hmr: {
-			overlay: false,
+export default defineConfig(() => {
+	return {
+		plugins: [vue()],
+		resolve: {
+			alias: {
+				'@': pathSrc,
+			},
 		},
-	},
+		base: './',
+		server: {
+			hmr: {
+				overlay: false,
+			},
+		},
+	}
 })

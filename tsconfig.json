@@ -8,17 +8,27 @@
     "useDefineForClassFields": true,
     "module": "commonjs",
     "moduleResolution": "node",
-    "strict": true,
+    "strict": false,
     "sourceMap": true,
     "resolveJsonModule": true,
     "isolatedModules": false,
     "esModuleInterop": true,
+    "noUnusedLocals": false,
     "lib": [
       "esnext",
       "dom"
     ],
     "skipLibCheck": true,
     "outDir": "dist/electron",
+    "baseUrl": "./",
+    "paths": {
+      "@": [
+        "src"
+      ],
+      "@/*": [
+        "src/*"
+      ],
+    }
   },
   "include": [
     "src/electron/**/*",

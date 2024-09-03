@@ -6,7 +6,7 @@
 
 <script lang="ts">
 	import { defineComponent } from 'vue'
-	import VoiceCaller from './components/VoiceCaller.vue'
+	import VoiceCaller from '@/components/printForm/index.vue'
 
 	export default defineComponent({
 		name: 'App',
